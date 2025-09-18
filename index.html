@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeautyBook - Rezervări Saloane</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #374151;
+        }
+        .salon-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+
+        const MultiSalonBookingApp = () => {
+          const salons = [
+            { 
+              id: 'salon_1', 
+              name: 'Beauty Palace', 
+              city: 'București',
+              address: 'Str. Frumuseții 123',
+              rating: 4.8,
+              image: '🏢',
+              phone: '0751234567',
+              categories: ['par', 'machiaj', 'unghii']
+            },
+            { 
+              id: 'salon_2', 
+              name: 'Glamour Studio', 
+              city: 'Cluj-Napoca',
+              address: 'Str. Modei 45',
+              rating: 4.9,
+              image: '✨',
+              phone: '0751234568',
+              categories: ['par', 'machiaj']
+            },
+            { 
+              id: 'salon_3', 
+              name: 'Nail Art Center', 
+              city: 'București',
+              address: 'Bd. Libertății 78',
+              rating: 4.7,
+              image: '💅',
+              phone: '0751234569',
+              categories: ['unghii']
+            }
+          ];
+
+          const servicesBySalon = {
+            salon_1: [
+              { id: 1, name: 'Tuns și Spălat', duration: 45, price: 80, category: 'par' },
+              { id: 2, name: 'Vopsit Păr', duration: 120, price: 150, category: 'par' },
+              { id: 3, name: 'Machiaj Zi', duration: 60, price: 100, category: 'machiaj' },
+              { id: 4, name: 'Manichiură Gel', duration: 90, price: 120, category: 'unghii' }
+            ],
+            salon_2: [
+              { id: 5, name: 'Tuns Premium', duration: 60, price: 120, category: 'par' },
+              { id: 6, name: 'Balayage', duration: 180, price: 280, category: 'par' },
+              { id: 7, name: 'Machiaj Profesional', duration: 90, price: 200, category: 'machiaj' }
+            ],
+            salon_3: [
+              { id: 8, name: 'Manichiură Franceză', duration: 60, price: 80, category: 'unghii' },
+              { id: 9, name: 'Nail Art Design', duration: 120, price: 150, category: 'unghii' },
+              { id: 10, name: 'Pedichiură SPA', duration: 90, price: 110, category: 'unghii' }
+            ]
+          };
+
+          const staffBySalon = {
+            salon_1: [
+              { id: 1, name: 'Maria Popescu', specialties: ['par', 'machiaj'], rating: 4.9, avatar: '👩‍🦰' },
+              { id: 2, name: 'Ana Ionescu', specialties: ['unghii'], rating: 4.8, avatar: '👩‍🦱' }
+            ],
+            salon_2: [
+              { id: 3, name: 'Elena Marin', specialties: ['par'], rating: 4.7, avatar: '👩‍🦳' },
+              { id: 4, name: 'Cristina Pavel', specialties: ['machiaj'], rating: 4.9, avatar: '👩' }
+            ],
+            salon_3: [
+              { id: 5, name: 'Diana Gheorghe', specialties: ['unghii'], rating: 4.8, avatar: '👩‍🦰' },
+              { id: 6, name: 'Laura Mihai', specialties: ['unghii'], rating: 4.9, avatar: '👩‍🦱' }
+            ]
+          };
+
+          const [currentStep, setCurrentStep] = useState(0);
+          const [selectedCity, setSelectedCity] = useState('');
+          const [selectedSalon, setSelectedSalon] = useState(null);
+          const [selectedService, setSelectedService] = useState(null);
+          const [selectedStaff, setSelectedStaff] = useState(null);
+          const [selectedDate, setSelectedDate] = useState('');
+          const [selectedTime, setSelectedTime] = useState('');
+          const [clientInfo, setClientInfo] = useState({
+            name: '',
+            phone: '',
+            email: '',
+            notes: ''
+          });
+
+          const cities = [...new Set(salons.map(salon => salon.city))];
+          const filteredSalons = selectedCity 
+            ? salons.filter(salon => salon.city === selectedCity)
+            : salons;
+
+          const currentServices = selectedSalon ? servicesBySalon[selectedSalon.id] || [] : [];
+          const currentStaff = selectedSalon ? staffBySalon[selectedSalon.id] || [] : [];
+
+          const getAvailableDates = () => {
+            const dates = [];
+            const today = new Date();
+            
+            for (let i = 0; i < 30; i++) {
+              const date = new Date(today);
+              date.setDate(today.getDate() + i);
+              
+              if (date.getDay() !== 0) {
+                dates.push({
+                  date: date.toISOString().split('T')[0],
+                  display: date.toLocaleDateString('ro-RO', { 
+                    weekday: 'long', 
+                    day: 'numeric', 
+                    month: 'long' 
+                  })
+                });
+              }
+            }
+            return dates;
+          };
+
+          const getAvailableSlots = () => {
+            const slots = [];
+            const startHour = 9;
+            const endHour = 18;
+            
+            for (let hour = startHour; hour < endHour; hour++) {
+              for (let minute = 0; minute < 60; minute += 30) {
+                const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                if (Math.random() > 0.3) {
+                  slots.push(timeSlot);
+                }
+              }
+            }
+            return slots;
+          };
+
+          const availableDates = getAvailableDates();
+          const availableSlots = selectedStaff && selectedDate ? getAvailableSlots() : [];
+          const filteredStaff = selectedService ? 
+            currentStaff.filter(member => member.specialties.includes(selectedService.category)) : 
+            currentStaff;
+
+          const handleBooking = () => {
+            alert(`Rezervare confirmată!
+
+📍 Salon: ${selectedSalon.name}
+💇‍♀️ Serviciu: ${selectedService.name}
+👩‍🦰 Specialist: ${selectedStaff.name}
+📅 Data: ${availableDates.find(d => d.date === selectedDate)?.display}
+🕐 Ora: ${selectedTime}
+💰 Preț: ${selectedService.price} lei
+
+Vă mulțumim!`);
+            
+            setCurrentStep(0);
+            setSelectedCity('');
+            setSelectedSalon(null);
+            setSelectedService(null);
+            setSelectedStaff(null);
+            setSelectedDate('');
+            setSelectedTime('');
+            setClientInfo({ name: '', phone: '', email: '', notes: '' });
+          };
+
+          const isStepValid = (step) => {
+            switch(step) {
+              case 0: return selectedSalon !== null;
+              case 1: return selectedService !== null;
+              case 2: return selectedStaff !== null;
+              case 3: return selectedDate !== '';
+              case 4: return selectedTime !== '';
+              case 5: return clientInfo.name && clientInfo.phone;
+              default: return false;
+            }
+          };
+
+          const stepTitles = [
+            'Alege Salonul',
+            'Alege Serviciul', 
+            'Alege Specialistul',
+            'Alege Data',
+            'Alege Ora',
+            'Datele Tale'
+          ];
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
+              <div className="bg-white shadow-lg">
+                <div className="max-w-6xl mx-auto px-4 py-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-2 rounded-lg">
+                        <span className="text-2xl text-white">🏢</span>
+                      </div>
+                      <div>
+                        <h1 className="text-3xl font-bold text-gray-800">BeautyBook</h1>
+                        <p className="text-gray-600">Platforma de rezervări pentru saloane</p>
+                      </div>
+                    </div>
+                    {selectedSalon && (
+                      <div className="text-right">
+                        <div className="text-sm text-gray-500">Rezervezi la:</div>
+                        <div className="font-semibold text-gray-800">{selectedSalon.name}</div>
+                        <div className="text-sm text-gray-600">{selectedSalon.city}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-w-6xl mx-auto px-4 py-6">
+                {currentStep > 0 && (
+                  <div className="flex justify-between items-center mb-8">
+                    {[1, 2, 3, 4, 5].map((step) => (
+                      <div key={step} className="flex items-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                          currentStep >= step 
+                            ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white' 
+                            : 'bg-gray-200 text-gray-500'
+                        }`}>
+                          {step}
+                        </div>
+                        {step < 5 && (
+                          <div className={`w-16 h-1 ${
+                            currentStep > step ? 'bg-gradient-to-r from-pink-500 to-purple-600' : 'bg-gray-200'
+                          }`} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="bg-white rounded-xl shadow-xl p-6">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                    {stepTitles[currentStep]}
+                  </h2>
+
+                  {currentStep === 0 && (
+                    <div>
+                      <div className="mb-6">
+                        <label className="block text-sm font-semibold text-gray-700 mb-3">
+                          Filtrează după oraș:
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setSelectedCity('')}
+                            className={`px-4 py-2 rounded-full text-sm transition-all ${
+                              selectedCity === '' 
+                                ? 'bg-pink-500 text-white' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            Toate
+                          </button>
+                          {cities.map(city => (
+                            <button
+                              key={city}
+                              onClick={() => setSelectedCity(city)}
+                              className={`px-4 py-2 rounded-full text-sm transition-all ${
+                                selectedCity === city 
+                                  ? 'bg-pink-500 text-white' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              {city}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredSalons.map((salon) => (
+                          <div
+                            key={salon.id}
+                            onClick={() => setSelectedSalon(salon)}
+                            className={`salon-card p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                              selectedSalon?.id === salon.id
+                                ? 'border-pink-500 bg-pink-50'
+                                : 'border-gray-200 hover:border-pink-300'
+                            }`}
+                          >
+                            <div className="text-center">
+                              <div className="text-4xl mb-3">{salon.image}</div>
+                              <h3 className="text-xl font-bold text-gray-800 mb-2">{salon.name}</h3>
+                              
+                              <div className="flex items-center justify-center mb-2">
+                                <span className="text-sm mr-1">📍</span>
+                                <span className="text-sm text-gray-600">{salon.city}</span>
+                              </div>
+                              
+                              <div className="text-sm text-gray-600 mb-3">{salon.address}</div>
+                              
+                              <div className="flex items-center justify-center mb-3">
+                                <span className="text-yellow-500 mr-1">⭐</span>
+                                <span className="text-sm font-semibold">{salon.rating}</span>
+                              </div>
+                              
+                              <div className="flex justify-center space-x-2">
+                                {salon.categories.map(cat => (
+                                  <span key={cat} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                                    {cat}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 1 && (
+                    <div>
+                      <div className="mb-4 p-4 bg-pink-50 rounded-lg">
+                        <div className="flex items-center">
+                          <span className="text-2xl mr-3">{selectedSalon.image}</span>
+                          <div>
+                            <div className="font-semibold">{selectedSalon.name}</div>
+                            <div className="text-sm text-gray-600">{selectedSalon.address}, {selectedSalon.city}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {currentServices.map((service) => (
+                          <div
+                            key={service.id}
+                            onClick={() => setSelectedService(service)}
+                            className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                              selectedService?.id === service.id
+                                ? 'border-pink-500 bg-pink-50'
+                                : 'border-gray-200 hover:border-pink-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="p-2 bg-purple-100 rounded-lg">
+                                <span className="text-purple-600">✨</span>
+                              </div>
+                              <span className="text-2xl font-bold text-pink-600">{service.price} lei</span>
+                            </div>
+                            <h3 className="font-semibold text-gray-800 mb-2">{service.name}</h3>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <span className="mr-1">🕐</span>
+                              {service.duration} minute
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 2 && (
+                    <div>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {filteredStaff.map((member) => (
+                          <div
+                            key={member.id}
+                            onClick={() => setSelectedStaff(member)}
+                            className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                              selectedStaff?.id === member.id
+                                ? 'border-pink-500 bg-pink-50'
+                                : 'border-gray-200 hover:border-pink-300'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-4">
+                              <div className="text-4xl">{member.avatar}</div>
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-gray-800">{member.name}</h3>
+                                <div className="flex items-center mt-1">
+                                  <span className="text-yellow-500">⭐</span>
+                                  <span className="text-sm text-gray-600 ml-1">{member.rating}</span>
+                                </div>
+                                <div className="text-sm text-gray-500 mt-1">
+                                  Specializare: {member.specialties.join(', ')}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 3 && (
+                    <div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {availableDates.slice(0, 12).map((dateOption) => (
+                          <div
+                            key={dateOption.date}
+                            onClick={() => setSelectedDate(dateOption.date)}
+                            className={`p-4 rounded-lg border-2 cursor-pointer text-center transition-all duration-200 hover:shadow-md ${
+                              selectedDate === dateOption.date
+                                ? 'border-pink-500 bg-pink-50'
+                                : 'border-gray-200 hover:border-pink-300'
+                            }`}
+                          >
+                            <div className="text-sm text-gray-600 capitalize">
+                              {dateOption.display}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 4 && (
+                    <div>
+                      <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          <strong>Salon:</strong> {selectedSalon.name} <br/>
+                          <strong>Serviciu:</strong> {selectedService?.name} ({selectedService?.duration} min) <br/>
+                          <strong>Specialist:</strong> {selectedStaff?.name} <br/>
+                          <strong>Data:</strong> {availableDates.find(d => d.date === selectedDate)?.display}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        {availableSlots.map((slot) => (
+                          <div
+                            key={slot}
+                            onClick={() => setSelectedTime(slot)}
+                            className={`p-3 rounded-lg border-2 cursor-pointer text-center transition-all duration-200 hover:shadow-md ${
+                              selectedTime === slot
+                                ? 'border-pink-500 bg-pink-50 text-pink-700'
+                                : 'border-gray-200 hover:border-pink-300'
+                            }`}
+                          >
+                            {slot}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 5 && (
+                    <div>
+                      <div className="mb-6 p-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg">
+                        <h3 className="font-semibold text-gray-800 mb-3">Sumar Rezervare:</h3>
+                        <div className="grid md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Salon:</strong> {selectedSalon.name}<br/>
+                            <strong>Locație:</strong> {selectedSalon.address}, {selectedSalon.city}<br/>
+                            <strong>Serviciu:</strong> {selectedService?.name}<br/>
+                            <strong>Preț:</strong> {selectedService?.price} lei
+                          </div>
+                          <div>
+                            <strong>Specialist:</strong> {selectedStaff?.name}<br/>
+                            <strong>Data:</strong> {availableDates.find(d => d.date === selectedDate)?.display}<br/>
+                            <strong>Ora:</strong> {selectedTime}<br/>
+                            <strong>Durată:</strong> {selectedService?.duration} minute
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Numele tău *
+                          </label>
+                          <input
+                            type="text"
+                            value={clientInfo.name}
+                            onChange={(e) => setClientInfo({...clientInfo, name: e.target.value})}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                            placeholder="ex: Maria Popescu"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Telefon *
+                          </label>
+                          <input
+                            type="tel"
+                            value={clientInfo.phone}
+                            onChange={(e) => setClientInfo({...clientInfo, phone: e.target.value})}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                            placeholder="ex: 0751234567"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Email (opțional)
+                          </label>
+                          <input
+                            type="email"
+                            value={clientInfo.email}
+                            onChange={(e) => setClientInfo({...clientInfo, email: e.target.value})}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                            placeholder="ex: maria@email.com"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Mențiuni speciale (opțional)
+                          </label>
+                          <textarea
+                            value={clientInfo.notes}
+                            onChange={(e) => setClientInfo({...clientInfo, notes: e.target.value})}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                            rows="3"
+                            placeholder="ex: am părul foarte sensibil..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between mt-8">
+                    <button
+                      onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                      disabled={currentStep === 0}
+                      className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+                        currentStep === 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      Înapoi
+                    </button>
+
+                    {currentStep < 5 ? (
+                      <button
+                        onClick={() => setCurrentStep(currentStep + 1)}
+                        disabled={!isStepValid(currentStep)}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center ${
+                          isStepValid(currentStep)
+                            ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        Următorul
+                        <span className="ml-1">▶</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleBooking}
+                        disabled={!isStepValid(5)}
+                        className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center ${
+                          isStepValid(5)
+                            ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-lg transform hover:scale-105'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <span className="mr-2">✓</span>
+                        Confirmă Rezervarea
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white mt-12 py-8">
+                <div className="max-w-6xl mx-auto px-4 text-center">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">BeautyBook</h3>
+                  <p className="text-gray-600 mb-4">
+                    Platforma completă pentru rezervări online în saloanele de înfrumusețare
+                  </p>
+                  <p className="text-gray-500">
+                    Multi-salon • Rezervări în timp real • Design responsive
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        ReactDOM.render(<MultiSalonBookingApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
